@@ -1,4 +1,31 @@
 document.addEventListener("DOMContentLoaded", function () {
+    // Mobile Sidebar toggle control
+    const toggleBtn = document.getElementById("sidebar-toggle");
+    const sidebar = document.getElementById("sidebar");
+    const overlay = document.getElementById("sidebar-overlay");
+
+    if (toggleBtn && sidebar && overlay) {
+        toggleBtn.addEventListener("click", function () {
+            sidebar.classList.toggle("show");
+            overlay.classList.toggle("show");
+        });
+
+        overlay.addEventListener("click", function () {
+            sidebar.classList.remove("show");
+            overlay.classList.remove("show");
+        });
+
+        // Close sidebar on link click (useful in mobile single-page or transition views)
+        const links = sidebar.querySelectorAll(".sidebar-link");
+        links.forEach(link => {
+            link.addEventListener("click", function () {
+                sidebar.classList.remove("show");
+                overlay.classList.remove("show");
+            });
+        });
+    }
+
+    // Chat client interface
     const chatForm = document.getElementById("chat-form");
     const chatInput = document.getElementById("chat-input");
     const chatMessages = document.getElementById("chat-messages");

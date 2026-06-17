@@ -12,10 +12,24 @@
     <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
 </head>
 <body>
+    <!-- Mobile Responsive Top Bar -->
+    {% if session.get('user_id') %}
+    <div class="mobile-header d-lg-none">
+        <div class="brand">
+            <i class="fa-solid fa-graduation-cap text-gradient-primary"></i>
+            <span>Success AI</span>
+        </div>
+        <button class="btn btn-outline-light border-0" id="sidebar-toggle">
+            <i class="fa-solid fa-bars fs-4"></i>
+        </button>
+    </div>
+    <div class="sidebar-overlay" id="sidebar-overlay"></div>
+    {% endif %}
+
     <div class="layout-wrapper">
         <!-- Sidebar Navigation -->
         {% if session.get('user_id') %}
-        <nav class="sidebar">
+        <nav class="sidebar" id="sidebar">
             <div class="sidebar-brand">
                 <i class="fa-solid fa-graduation-cap text-gradient-primary"></i>
                 <span>Student Success AI</span>

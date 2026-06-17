@@ -15,7 +15,7 @@
     <!-- Metrics Grid -->
     <div class="row g-4 mb-5">
         <!-- Metric 1: Tasks -->
-        <div class="col-md-3">
+        <div class="col-sm-6 col-lg-3">
             <div class="card-metric glass-panel h-100">
                 <div class="metric-title">Total Tasks</div>
                 <div class="metric-value text-gradient-primary">{{ total_tasks }}</div>
@@ -24,7 +24,7 @@
         </div>
 
         <!-- Metric 2: Attendance -->
-        <div class="col-md-3">
+        <div class="col-sm-6 col-lg-3">
             <div class="card-metric glass-panel h-100">
                 <div class="metric-title">Average Attendance</div>
                 <div class="metric-value {% if avg_attendance >= 75 %}text-success{% else %}text-danger{% endif %}">
@@ -41,7 +41,7 @@
         </div>
 
         <!-- Metric 3: Predicted Marks -->
-        <div class="col-md-3">
+        <div class="col-sm-6 col-lg-3">
             <div class="card-metric glass-panel h-100">
                 <div class="metric-title">Predicted Final Score</div>
                 <div class="metric-value text-gradient-accent">
@@ -62,7 +62,7 @@
         </div>
 
         <!-- Metric 4: Urgent Tasks -->
-        <div class="col-md-3">
+        <div class="col-sm-6 col-lg-3">
             <div class="card-metric glass-panel h-100">
                 <div class="metric-title">Urgent Tasks</div>
                 <div class="metric-value text-warning">{{ urgent_tasks_count }}</div>

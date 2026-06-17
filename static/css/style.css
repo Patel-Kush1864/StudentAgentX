@@ -320,3 +320,100 @@ h1, h2, h3, h4, h5, h6 {
 ::-webkit-scrollbar-thumb:hover {
     background: rgba(255, 255, 255, 0.3);
 }
+
+/* ==================================================
+   MOBILE RESPONSIVENESS AND LAYOUT CONTROLS
+   ================================================== */
+
+.mobile-header {
+    display: none;
+}
+
+.sidebar-overlay {
+    display: none;
+}
+
+/* Tablet and Mobile Media Queries */
+@media (max-width: 991.98px) {
+    .layout-wrapper {
+        flex-direction: column;
+        min-height: auto;
+    }
+
+    /* Mobile header bar visibility */
+    .mobile-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        background: rgba(8, 12, 22, 0.95);
+        backdrop-filter: blur(16px);
+        border-bottom: 1px solid var(--glass-border);
+        padding: 16px 24px;
+        position: sticky;
+        top: 0;
+        z-index: 105;
+        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+    }
+
+    .mobile-header .brand {
+        font-family: 'Outfit', sans-serif;
+        font-size: 1.25rem;
+        font-weight: 800;
+        background: var(--primary-gradient);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+    }
+
+    /* Transform sidebar into responsive sliding drawer */
+    .sidebar {
+        position: fixed;
+        top: 0;
+        bottom: 0;
+        left: -300px;
+        width: 280px;
+        height: 100vh;
+        z-index: 110;
+        transition: left 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        background: #080c16;
+        box-shadow: 10px 0 30px rgba(0,0,0,0.5);
+    }
+
+    .sidebar.show {
+        left: 0;
+    }
+
+    /* Responsive overlay mask */
+    .sidebar-overlay {
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: rgba(0, 0, 0, 0.7);
+        backdrop-filter: blur(5px);
+        -webkit-backdrop-filter: blur(5px);
+        z-index: 109;
+        display: none;
+    }
+
+    .sidebar-overlay.show {
+        display: block;
+    }
+
+    .main-content {
+        padding: 24px 16px;
+        max-height: none;
+    }
+
+    /* Adjust AI chat display height on smaller screens */
+    .chat-container {
+        height: calc(100vh - 160px);
+    }
+
+    .chat-bubble {
+        max-width: 90%;
+    }
+}
