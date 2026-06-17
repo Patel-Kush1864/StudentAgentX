@@ -1,90 +1,123 @@
-# Student AI Agent
+# Autonomous Student Success AI Agent
 
-Student AI Agent is a complete, production-quality, local AI-powered assistant designed for students to manage tasks, prioritize their workload, generate study plans, create exam notes, and perform attendance tracking. It runs fully offline using **Python**, **Ollama**, and the **Llama3** model.
+The **Autonomous Student Success AI Agent** is a production-quality, local web application designed to help students track performance, manage deadlines, generate exam study notes and resumes, receive AI-matched career recommendations, and run machine learning models to predict final exam scores.
 
-## Features
-
-1. **Task Management**:
-   - Add tasks with specific deadlines.
-   - View a summary of all current tasks (Pending/Completed).
-   - Complete tasks from a list of pending tasks.
-   - Offline memory stored in `tasks.json`.
-
-2. **AI Task Prioritization**:
-   - Analyzes pending tasks using the local `llama3` model.
-   - Returns a structured priority order based on deadlines, logical reasoning, and a suggested completion sequence.
-
-3. **AI Study Planner**:
-   - Generates a customized, structured study schedule based on pending tasks.
-   - Maps tasks to daily time slots and offers concrete recommendations.
-
-4. **AI Notes Generator**:
-   - Produces exam-ready notes for any topic.
-   - Structured sections include: *Introduction*, *Working*, *Advantages*, *Disadvantages*, and *Conclusion*.
-
-5. **Attendance Analysis**:
-   - Tracks attendance for each subject stored in `attendance.json`.
-   - Flags subjects falling below the 75% threshold.
-   - Automatically computes exactly how many consecutive lectures must be attended to restore attendance to at least 75% using the formula:
-     $$x = 3T - 4A$$
-     *(where $T$ = total lectures and $A$ = attended lectures)*
+It operates fully offline using **Flask**, **SQLite**, **Bootstrap 5**, **Scikit-learn**, **ReportLab**, and **Ollama (Llama3)**.
 
 ---
 
-## Project Structure
+## Key Features
+
+1. **Autonomous Master Agent & Chat**:
+   - Zero-shot classification routes queries to specialized sub-agents.
+   - Provides contextual recommendations by reading task and attendance records in real-time.
+
+2. **Smart Task Management**:
+   - Autocalculates days remaining and priority level (High/Medium/Low).
+   - Generates dashboard deadline alerts for tasks due within 48 hours.
+
+3. **Attendance Risk Management**:
+   - Computes percentages and highlights subjects below the 75% limit.
+   - Proactively predicts future shortages (if you skip the next 3 classes).
+   - Calculates consecutive lectures needed to recover.
+
+4. **AI Exam Notes Generator**:
+   - Generates notes structured into: *Introduction*, *Concept*, *Working*, *Advantages*, *Disadvantages*, and *Conclusion*.
+   - Exporter compiles study notes into a professionally structured PDF document.
+
+5. **AI Study Planner**:
+   - Creates a personalized, hour-wise calendar schedule based on tasks and exam dates.
+
+6. **AI Resume Builder & PDF Exporter**:
+   - Refines raw input details into impact-driven bullet points using the STAR method.
+   - Exports the polished single-page resume to PDF.
+
+7. **AI Internship Recommendations**:
+   - Tailors placement suggestions (Web Dev, AI/ML, Blockchain, Full Stack) based on skills, projects, and career interests.
+
+8. **ML Exam Score Predictor**:
+   - Uses a Scikit-learn Linear Regression model trained on local synthetic data.
+   - Evaluates attendance, daily study hours, and internal marks to predict final exam grades.
+
+---
+
+## File Structure
 
 ```text
-student-agent/
+student_ai_agent/
 │
-├── app.py                # Main command line interface (CLI) and application loop
-├── database.py           # Functions to load and save data from tasks.json and attendance.json
-├── task_agent.py         # AI Agent integration with Ollama (Llama3)
-├── tasks.json            # Tasks database (local storage)
-├── attendance.json       # Attendance database (local storage)
-├── requirements.txt      # Python dependencies
-└── README.md             # This documentation
+├── app.py                      # Flask routing & application controllers
+├── student.db                  # Local SQLite database
+├── requirements.txt            # Python dependencies
+├── README.md                   # Setup guidelines
+│
+├── database/
+│   └── db_helper.py            # SQLite schema initialization and seeding
+│
+├── models/
+│   └── ml_model.py             # Scikit-learn Linear Regression Marks Predictor
+│
+├── agents/
+│   ├── master_agent.py         # Intent classifier and router agent
+│   ├── task_agent.py           # Countdown and prioritization agent
+│   ├── attendance_agent.py     # Attendance analysis agent
+│   ├── notes_agent.py          # Exam notes generation agent
+│   ├── study_planner_agent.py    # Study schedule planner agent
+│   ├── resume_agent.py         # Resume builder polisher agent
+│   └── internship_agent.py     # Recruiter match career agent
+│
+├── services/
+│   └── pdf_generator.py        # ReportLab PDF compile pipeline
+│
+├── templates/                  # Jinja2 HTML layout views
+│   ├── base.html
+│   ├── login.html
+│   ├── register.html
+│   ├── dashboard.html
+│   ├── tasks.html
+│   ├── attendance.html
+│   ├── notes.html
+│   ├── study_planner.html
+│   ├── resume_builder.html
+│   ├── marks_predictor.html
+│   ├── profile.html
+│   └── chat.html
+│
+└── static/                     # Assets
+    ├── css/
+    │   └── style.css           # Premium Glassmorphism Dark Theme
+    └── js/
+        └── main.js             # Chat AJAX integrations
 ```
 
 ---
 
-## Setup Instructions
+## Setup & Running Guide
 
-### Prerequisites
-1. **Python 3.8+** installed.
-2. **Ollama** installed on your system.
-   - If not installed, download from [ollama.com](https://ollama.com).
+### 1. Prerequisites
+- **Python 3.9+** installed.
+- **Ollama** installed locally. (Make sure you have pulled `llama3`: `ollama run llama3`).
 
-### Installation & Run Steps
+### 2. Install Dependencies
+Install all required libraries using pip:
+```bash
+pip install -r requirements.txt
+```
 
-1. **Start Ollama & Download Llama3**
-   Open your terminal/command prompt and run:
-   ```bash
-   ollama run llama3
-   ```
-   *Make sure the Ollama desktop application is active in the background.*
-
-2. **Install Python Dependencies**
-   Navigate to the project directory and install the required library:
-   ```bash
-   pip install -r requirements.txt
-   ```
-
-3. **Run the Application**
-   Launch the command line interface:
-   ```bash
-   python app.py
-   ```
+### 3. Initialize & Run
+Start the web application:
+```bash
+python app.py
+```
+This will automatically:
+1. Initialize the SQLite database `student.db`.
+2. Seed mock student data for instant testing.
+3. Train the Scikit-learn marks predictor model in memory.
+4. Launch the local server on `http://127.0.0.1:5000`.
 
 ---
 
-## Menu Options
-
-Upon running, you will be presented with a menu:
-1. **Add Task**: Input task names and deadlines.
-2. **View Tasks**: Show status of all tasks.
-3. **AI Prioritize Tasks**: Get AI-generated priorities and reasoning.
-4. **Complete Task**: Select a pending task by index to mark it complete.
-5. **Generate Study Plan**: Get a personalized study calendar.
-6. **Generate Notes**: Prompt Llama3 to write exam notes.
-7. **Attendance Analysis**: Review percentages and get attendance strategies.
-8. **Exit**: Terminate the CLI application.
+## Credentials for Testing
+You can sign up for a new account, or use the pre-seeded student account:
+- **Email**: `user@example.com`
+- **Password**: `password123`

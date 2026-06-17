@@ -1,0 +1,163 @@
+{% extends "base.html" %}
+
+{% block title %}Dashboard - Student Success AI{% endblock %}
+
+{% block content %}
+<div class="container-fluid px-0">
+    <!-- Header -->
+    <div class="row mb-5">
+        <div class="col-12">
+            <h1 class="font-outfit fw-bold text-gradient-primary">Hello, {{ session.get('user_name') }}!</h1>
+            <p class="text-secondary">Welcome to your Autonomous Success Dashboard. Here is your current academic health check.</p>
+        </div>
+    </div>
+
+    <!-- Metrics Grid -->
+    <div class="row g-4 mb-5">
+        <!-- Metric 1: Tasks -->
+        <div class="col-md-3">
+            <div class="card-metric glass-panel h-100">
+                <div class="metric-title">Total Tasks</div>
+                <div class="metric-value text-gradient-primary">{{ total_tasks }}</div>
+                <div class="text-secondary small">{{ pending_tasks }} pending tasks remaining</div>
+            </div>
+        </div>
+
+        <!-- Metric 2: Attendance -->
+        <div class="col-md-3">
+            <div class="card-metric glass-panel h-100">
+                <div class="metric-title">Average Attendance</div>
+                <div class="metric-value {% if avg_attendance >= 75 %}text-success{% else %}text-danger{% endif %}">
+                    {{ "%.2f"|format(avg_attendance) }}%
+                </div>
+                <div class="text-secondary small">
+                    {% if avg_attendance >= 75 %}
+                        Sufficient attendance level.
+                    {% else %}
+                        Critical! Attendance is below 75% limit.
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <!-- Metric 3: Predicted Marks -->
+        <div class="col-md-3">
+            <div class="card-metric glass-panel h-100">
+                <div class="metric-title">Predicted Final Score</div>
+                <div class="metric-value text-gradient-accent">
+                    {% if predicted_marks %}
+                        {{ predicted_marks }}%
+                    {% else %}
+                        --
+                    {% endif %}
+                </div>
+                <div class="text-secondary small">
+                    {% if predicted_marks %}
+                        Machine Learning estimate.
+                    {% else %}
+                        Calculate in the Marks Predictor.
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <!-- Metric 4: Urgent Tasks -->
+        <div class="col-md-3">
+            <div class="card-metric glass-panel h-100">
+                <div class="metric-title">Urgent Tasks</div>
+                <div class="metric-value text-warning">{{ urgent_tasks_count }}</div>
+                <div class="text-secondary small">Due in the next 48 hours</div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row g-4">
+        <!-- Left Column: Critical Warnings & Alerts -->
+        <div class="col-lg-8">
+            <!-- Urgent Tasks Alert Card -->
+            <div class="card glass-panel border-0 text-white p-4 mb-4">
+                <h4 class="font-outfit fw-bold mb-3 d-flex align-items-center gap-2">
+                    <i class="fa-solid fa-triangle-exclamation text-warning"></i>
+                    <span>Urgent Task Deadlines</span>
+                </h4>
+                {% if urgent_tasks %}
+                    <div class="list-group list-group-flush bg-transparent">
+                        {% for task in urgent_tasks %}
+                            <div class="list-group-item bg-transparent text-white px-0 py-3 border-bottom-0 d-flex justify-content-between align-items-center">
+                                <div>
+                                    <h6 class="mb-1 fw-bold">{{ task.task_name }}</h6>
+                                    <small class="text-secondary">Deadline: {{ task.deadline }}</small>
+                                </div>
+                                <span class="badge badge-priority-High px-3 py-2">
+                                    {{ task.days_remaining }} days left
+                                </span>
+                            </div>
+                        {% endfor %}
+                    </div>
+                {% else %}
+                    <p class="text-secondary mb-0">No urgent deadlines. Good job keeping on top of things!</p>
+                {% endif %}
+            </div>
+
+            <!-- Attendance Risk Warnings -->
+            <div class="card glass-panel border-0 text-white p-4">
+                <h4 class="font-outfit fw-bold mb-3 d-flex align-items-center gap-2">
+                    <i class="fa-solid fa-shield-halved text-danger"></i>
+                    <span>Attendance Shortage Risks</span>
+                </h4>
+                {% if low_attendance_subjects %}
+                    <div class="table-responsive">
+                        <table class="table table-glass bg-transparent text-white mb-0">
+                            <thead>
+                                <tr>
+                                    <th>Subject</th>
+                                    <th>Current Attendance</th>
+                                    <th>Required Classes</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for r in low_attendance_subjects %}
+                                    <tr>
+                                        <td>{{ r.subject }}</td>
+                                        <td class="text-danger fw-bold">{{ r.percentage }}%</td>
+                                        <td>
+                                            <span class="text-warning fw-bold">Attend next {{ r.needed }} lectures</span>
+                                        </td>
+                                    </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                {% else %}
+                    <p class="text-secondary mb-0">No attendance risk warnings. All subjects are above 75%.</p>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- Right Column: Quick Operations -->
+        <div class="col-lg-4">
+            <div class="card glass-panel border-0 text-white p-4 h-100">
+                <h4 class="font-outfit fw-bold mb-4">Quick AI Operations</h4>
+                <div class="d-flex flex-column gap-3">
+                    <a href="{{ url_for('chat') }}" class="btn btn-primary-gradient py-3 text-start d-flex justify-content-between align-items-center">
+                        <span><i class="fa-solid fa-comments me-2"></i> Ask AI Assistant</span>
+                        <i class="fa-solid fa-chevron-right"></i>
+                    </a>
+                    <a href="{{ url_for('notes') }}" class="btn btn-accent-gradient py-3 text-start d-flex justify-content-between align-items-center">
+                        <span><i class="fa-solid fa-book-open me-2"></i> Generate Exam Notes</span>
+                        <i class="fa-solid fa-chevron-right"></i>
+                    </a>
+                    <a href="{{ url_for('study_planner') }}" class="btn btn-primary-gradient py-3 text-start d-flex justify-content-between align-items-center">
+                        <span><i class="fa-solid fa-calendar-days me-2"></i> Customize Study Schedule</span>
+                        <i class="fa-solid fa-chevron-right"></i>
+                    </a>
+                    <a href="{{ url_for('marks_predictor') }}" class="btn btn-accent-gradient py-3 text-start d-flex justify-content-between align-items-center">
+                        <span><i class="fa-solid fa-brain me-2"></i> Predict Final Exam Marks</span>
+                        <i class="fa-solid fa-chevron-right"></i>
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

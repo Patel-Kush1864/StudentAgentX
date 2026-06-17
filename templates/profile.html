@@ -1,0 +1,86 @@
+{% extends "base.html" %}
+
+{% block title %}Profile & Careers - Student Success AI{% endblock %}
+
+{% block content %}
+<div class="container-fluid px-0">
+    <div class="row mb-5">
+        <div class="col-12">
+            <h1 class="font-outfit fw-bold text-gradient-primary">Student Profile & Career Center</h1>
+            <p class="text-secondary">Manage your academic credentials and discover AI-matched internship opportunities based on your skills and projects.</p>
+        </div>
+    </div>
+
+    <div class="row g-4">
+        <!-- Left: Account & Skills Profile -->
+        <div class="col-lg-5">
+            <!-- Account Info -->
+            <div class="card glass-panel border-0 text-white p-4 mb-4">
+                <h4 class="font-outfit fw-bold mb-4">Account Information</h4>
+                <div class="d-flex align-items-center gap-3 mb-4">
+                    <i class="fa-solid fa-circle-user fa-3x text-gradient-primary"></i>
+                    <div>
+                        <h5 class="mb-0 fw-bold">{{ session.get('user_name') }}</h5>
+                        <p class="text-secondary mb-0 small">{{ session.get('user_email') }}</p>
+                    </div>
+                </div>
+                <div class="small text-secondary">
+                    <span>Registered: {{ session.get('user_created_at', '2026-06-17') }}</span>
+                </div>
+            </div>
+
+            <!-- Profile Parameters (Skills, Projects, Interests) -->
+            <div class="card glass-panel border-0 text-white p-4">
+                <h4 class="font-outfit fw-bold mb-4">Skills & Interests</h4>
+                <form action="{{ url_for('update_profile') }}" method="POST">
+                    <div class="mb-3">
+                        <label for="skills" class="form-label text-secondary">Technical Skills</label>
+                        <input type="text" class="form-control form-control-glass" id="skills" name="skills" value="{{ skills }}" placeholder="e.g. Python, SQL, React" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="projects" class="form-label text-secondary">Key Projects</label>
+                        <textarea class="form-control form-control-glass" id="projects" name="projects" rows="3" placeholder="e.g. Student AI success platform, weather app" required>{{ projects }}</textarea>
+                    </div>
+                    <div class="mb-4">
+                        <label for="interests" class="form-label text-secondary">Interests / Career Target</label>
+                        <input type="text" class="form-control form-control-glass" id="interests" name="interests" value="{{ interests }}" placeholder="e.g. AI research, fullstack developer, blockchain" required>
+                    </div>
+                    <button type="submit" class="btn btn-primary-gradient w-100 py-3">
+                        Save Profile
+                    </button>
+                </form>
+            </div>
+        </div>
+
+        <!-- Right: AI Internship Recommendations -->
+        <div class="col-lg-7">
+            <div class="card glass-panel border-0 text-white p-4 h-100 d-flex flex-column justify-content-between">
+                <div>
+                    <div class="d-flex justify-content-between align-items-center mb-4">
+                        <h4 class="font-outfit fw-bold text-gradient-primary mb-0">AI Internship Matches</h4>
+                        <form action="{{ url_for('match_internships') }}" method="POST">
+                            <button type="submit" class="btn btn-accent-gradient">
+                                <i class="fa-solid fa-briefcase me-2"></i> Match Internships
+                            </button>
+                        </form>
+                    </div>
+                    
+                    {% if recommendations %}
+                        <div class="p-3 rounded" style="background: rgba(15, 23, 42, 0.45); border: 1px solid var(--glass-border); max-height: calc(100vh - 250px); overflow-y: auto;">
+                            <div style="white-space: pre-wrap; font-family: 'Inter', sans-serif; font-size: 0.95rem; line-height: 1.6; color: var(--text-primary);">
+                                {{ recommendations }}
+                            </div>
+                        </div>
+                    {% else %}
+                        <div class="text-center py-5">
+                            <i class="fa-solid fa-network-wired fa-4x text-muted mb-3"></i>
+                            <h5 class="text-secondary">No recommendations loaded</h5>
+                            <p class="text-muted small">Update your profile parameters on the left and click "Match Internships" to query career options.</p>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,235 +1,571 @@
-import math
-from database import load_tasks, save_tasks, load_attendance
-from task_agent import prioritize, generate_study_plan, generate_notes
+import os
+from functools import wraps
+from flask import Flask, render_template, request, redirect, url_for, session, flash, jsonify, send_file
+from werkzeug.security import generate_password_hash, check_password_hash
 
-def display_menu():
-    """
-    Displays the student assistant command line menu options.
-    """
-    print("\n" + "=" * 45)
-    print("         STUDENT AI ASSISTANT AGENT          ")
-    print("=" * 45)
-    print("1. Add Task")
-    print("2. View Tasks")
-    print("3. AI Prioritize Tasks")
-    print("4. Complete Task")
-    print("5. Generate Study Plan")
-    print("6. Generate Notes")
-    print("7. Attendance Analysis")
-    print("8. Exit")
-    print("=" * 45)
+# Custom Modules
+from database.db_helper import get_db_connection, init_db
+from models.ml_model import train_predictor_model, predict_score
+from agents.task_agent import calculate_days_remaining, auto_calculate_priority, get_urgent_tasks
+from agents.attendance_agent import analyze_attendance
+from agents.notes_agent import generate_exam_notes
+from agents.study_planner_agent import generate_custom_study_plan
+from agents.resume_agent import build_resume_content
+from agents.internship_agent import recommend_internships
+from agents.master_agent import handle_autonomous_query
+from services.pdf_generator import generate_notes_pdf, generate_resume_pdf
 
-def add_task_flow():
-    """
-    Guides the user through adding a new task, with validation.
-    """
-    print("\n--- Add New Task ---")
-    task_name = input("Enter task name: ").strip()
-    if not task_name:
-        print("[ERROR] Task name cannot be empty.")
-        return
+app = Flask(__name__)
+app.secret_key = "autonomous_student_success_secret_key"
 
-    deadline = input("Enter deadline (e.g. 'Tomorrow', '3 Days', '2026-06-20'): ").strip()
-    if not deadline:
-        print("[ERROR] Deadline cannot be empty.")
-        return
+# Initialize SQLite database and ML prediction model on application start
+init_db()
+train_predictor_model()
 
-    tasks = load_tasks()
-    new_task = {
-        "task": task_name,
-        "deadline": deadline,
-        "status": "Pending"
-    }
-    tasks.append(new_task)
-    save_tasks(tasks)
-    print(f"[SUCCESS] Task '{task_name}' successfully added as 'Pending'.")
+# Login Decorator to protect secure views
+def login_required(f):
+    @wraps(f)
+    def decorated_function(*args, **kwargs):
+        if 'user_id' not in session:
+            flash("Please sign in to access this page.", "error")
+            return redirect(url_for('login'))
+        return f(*args, **kwargs)
+    return decorated_function
 
-def view_tasks_flow():
-    """
-    Loads and displays all tasks with status and deadline formatting.
-    """
-    print("\n--- Current Tasks ---")
-    tasks = load_tasks()
-    if not tasks:
-        print("No tasks found. Add some tasks first!")
-        return
+# Context processor to expose variables to template views
+@app.context_processor
+def inject_active_page():
+    return dict(active_page=None)
 
-    print(f"{'#':<4} {'Task Name':<30} {'Deadline':<15} {'Status':<10}")
-    print("-" * 65)
-    for idx, task in enumerate(tasks, 1):
-        status_symbol = "[Pending]" if task.get("status") == "Pending" else "[Completed]"
-        print(f"{idx:<4} {task.get('task'):<30} {task.get('deadline'):<15} {status_symbol:<10}")
+@app.route('/')
+def index():
+    if 'user_id' in session:
+        return redirect(url_for('dashboard'))
+    return redirect(url_for('login'))
 
-def ai_prioritize_flow():
-    """
-    Loads tasks and uses Llama3 to prioritize them, streaming the output.
-    """
-    print("\n--- AI Task Prioritizer (Ollama) ---")
-    tasks = load_tasks()
-    pending_tasks = [t for t in tasks if t.get("status") == "Pending"]
-    if not pending_tasks:
-        print("No pending tasks to prioritize!")
-        return
-
-    print("[AI] Analyzing your tasks and deadlines. Please wait...")
-    print("\n[AI Recommendations]:")
-    print("-" * 50)
-    try:
-        for chunk in prioritize(tasks):
-            print(chunk, end='', flush=True)
-        print()
-    except Exception as e:
-        print(f"\n[ERROR] Error communicating with Ollama: {e}")
-        print("Please verify that Ollama is running and Llama3 is installed (`ollama run llama3`).")
-
-def complete_task_flow():
-    """
-    Guides the user to select and mark a pending task as completed.
-    """
-    print("\n--- Complete Task ---")
-    tasks = load_tasks()
-    
-    # Filter only pending tasks to choose from
-    pending_tasks_with_index = [(original_idx, task) for original_idx, task in enumerate(tasks) if task.get("status") == "Pending"]
-    
-    if not pending_tasks_with_index:
-        print("No pending tasks found to complete!")
-        return
-
-    print("Pending Tasks:")
-    for display_idx, (original_idx, task) in enumerate(pending_tasks_with_index, 1):
-        print(f"{display_idx}. {task.get('task')} (Deadline: {task.get('deadline')})")
-
-    try:
-        choice_str = input("\nEnter the number of the task to complete: ").strip()
-        choice = int(choice_str)
-        if 1 <= choice <= len(pending_tasks_with_index):
-            original_idx, selected_task = pending_tasks_with_index[choice - 1]
-            tasks[original_idx]["status"] = "Completed"
-            save_tasks(tasks)
-            print(f"[SUCCESS] Task '{selected_task.get('task')}' marked as Completed!")
+@app.route('/login', methods=['GET', 'POST'])
+def login():
+    if request.method == 'POST':
+        email = request.form.get('email', '').strip()
+        password = request.form.get('password', '').strip()
+        
+        conn = get_db_connection()
+        user = conn.execute("SELECT * FROM users WHERE email = ?", (email,)).fetchone()
+        conn.close()
+        
+        if user and check_password_hash(user['password'], password):
+            session['user_id'] = user['id']
+            session['user_name'] = user['name']
+            session['user_email'] = user['email']
+            session['user_created_at'] = user['created_at']
+            flash("Successfully signed in!", "success")
+            return redirect(url_for('dashboard'))
         else:
-            print("[ERROR] Selection out of range.")
-    except ValueError:
-        print("[ERROR] Please enter a valid number.")
+            flash("Invalid email address or password.", "error")
+            
+    return render_template('login.html')
 
-def generate_study_plan_flow():
-    """
-    Generates an AI structured study schedule, streaming the output.
-    """
-    print("\n--- AI Study Planner (Ollama) ---")
-    tasks = load_tasks()
-    pending_tasks = [t for t in tasks if t.get("status") == "Pending"]
-    if not pending_tasks:
-        print("No pending tasks to plan for!")
-        return
+@app.route('/register', methods=['GET', 'POST'])
+def register():
+    if request.method == 'POST':
+        name = request.form.get('name', '').strip()
+        email = request.form.get('email', '').strip()
+        password = request.form.get('password', '').strip()
+        
+        if not name or not email or not password:
+            flash("All registration fields are required.", "error")
+            return redirect(url_for('register'))
+            
+        hashed_password = generate_password_hash(password)
+        
+        conn = get_db_connection()
+        try:
+            conn.execute(
+                "INSERT INTO users (name, email, password) VALUES (?, ?, ?)",
+                (name, email, hashed_password)
+            )
+            conn.commit()
+            flash("Registration successful! Please login.", "success")
+            return redirect(url_for('login'))
+        except Exception as e:
+            flash(f"Error registering: Email might already be in use.", "error")
+        finally:
+            conn.close()
+            
+    return render_template('register.html')
 
-    print("[AI] Drafting your study schedule. Please wait...")
-    print("\n[AI Study Plan]:")
-    print("-" * 50)
+@app.route('/logout')
+def logout():
+    session.clear()
+    flash("Successfully signed out.", "success")
+    return redirect(url_for('login'))
+
+@app.route('/dashboard')
+@login_required
+def dashboard():
+    user_id = session['user_id']
+    conn = get_db_connection()
+    
+    tasks = conn.execute("SELECT * FROM tasks WHERE user_id = ? ORDER BY id DESC", (user_id,)).fetchall()
+    attendance = conn.execute("SELECT * FROM attendance WHERE user_id = ?", (user_id,)).fetchall()
+    
+    predicted_marks = session.get('predicted_marks', None)
+    conn.close()
+    
+    total_tasks = len(tasks)
+    pending_tasks = sum(1 for t in tasks if t['status'] == 'Pending')
+    
+    total_classes = sum(a['total'] for a in attendance)
+    total_attended = sum(a['attended'] for a in attendance)
+    avg_attendance = (total_attended / total_classes * 100) if total_classes > 0 else 0.0
+    
+    # Run Attendance Risk Agent calculations
+    analysis_data = analyze_attendance([dict(a) for a in attendance])
+    low_subs = analysis_data['low_subjects']
+    
+    # Process Tasks dead-lines countdown & urgent list
+    tasks_with_remaining = []
+    urgent_tasks = []
+    for t in tasks:
+        td = dict(t)
+        days = calculate_days_remaining(t['deadline'])
+        td['days_remaining'] = days
+        tasks_with_remaining.append(td)
+        if t['status'] == 'Pending' and days <= 2:
+            urgent_tasks.append(td)
+            
+    return render_template(
+        'dashboard.html',
+        active_page='dashboard',
+        total_tasks=total_tasks,
+        pending_tasks=pending_tasks,
+        avg_attendance=avg_attendance,
+        predicted_marks=predicted_marks,
+        urgent_tasks_count=len(urgent_tasks),
+        urgent_tasks=urgent_tasks,
+        low_attendance_subjects=low_subs
+    )
+
+@app.route('/tasks')
+@login_required
+def tasks():
+    user_id = session['user_id']
+    conn = get_db_connection()
+    tasks_rows = conn.execute("SELECT * FROM tasks WHERE user_id = ? ORDER BY status DESC, id DESC", (user_id,)).fetchall()
+    conn.close()
+    
+    tasks = []
+    for r in tasks_rows:
+        td = dict(r)
+        td['days_remaining'] = calculate_days_remaining(r['deadline'])
+        tasks.append(td)
+        
+    return render_template('tasks.html', active_page='tasks', tasks=tasks)
+
+@app.route('/tasks/add', methods=['POST'])
+@login_required
+def add_task():
+    user_id = session['user_id']
+    task_name = request.form.get('task_name', '').strip()
+    deadline = request.form.get('deadline', '').strip()
+    
+    if not task_name or not deadline:
+        flash("Task name and deadline are required.", "error")
+        return redirect(url_for('tasks'))
+        
+    # Smart task management: Auto-calculate remaining days and priority level
+    days = calculate_days_remaining(deadline)
+    priority = auto_calculate_priority(days)
+    
+    conn = get_db_connection()
+    conn.execute(
+        "INSERT INTO tasks (user_id, task_name, deadline, status, priority) VALUES (?, ?, ?, 'Pending', ?)",
+        (user_id, task_name, deadline, priority)
+    )
+    conn.commit()
+    conn.close()
+    
+    flash("Task successfully added!", "success")
+    return redirect(url_for('tasks'))
+
+@app.route('/tasks/complete/<int:task_id>', methods=['POST'])
+@login_required
+def complete_task(task_id):
+    user_id = session['user_id']
+    conn = get_db_connection()
+    conn.execute(
+        "UPDATE tasks SET status = 'Completed' WHERE id = ? AND user_id = ?",
+        (task_id, user_id)
+    )
+    conn.commit()
+    conn.close()
+    flash("Task marked as completed!", "success")
+    return redirect(url_for('tasks'))
+
+@app.route('/tasks/delete/<int:task_id>', methods=['POST'])
+@login_required
+def delete_task(task_id):
+    user_id = session['user_id']
+    conn = get_db_connection()
+    conn.execute("DELETE FROM tasks WHERE id = ? AND user_id = ?", (task_id, user_id))
+    conn.commit()
+    conn.close()
+    flash("Task deleted successfully.", "success")
+    return redirect(url_for('tasks'))
+
+@app.route('/attendance')
+@login_required
+def attendance():
+    user_id = session['user_id']
+    conn = get_db_connection()
+    records = conn.execute("SELECT * FROM attendance WHERE user_id = ?", (user_id,)).fetchall()
+    conn.close()
+    
+    analysis_data = analyze_attendance([dict(r) for r in records])
+    return render_template('attendance.html', active_page='attendance', attendance=analysis_data['analysis'])
+
+@app.route('/attendance/add', methods=['POST'])
+@login_required
+def add_attendance():
+    user_id = session['user_id']
+    subject_name = request.form.get('subject_name', '').strip()
+    attended = int(request.form.get('attended', 0))
+    total = int(request.form.get('total', 0))
+    
+    if not subject_name or total < 0 or attended < 0 or attended > total:
+        flash("Please enter valid subject and lecture counts.", "error")
+        return redirect(url_for('attendance'))
+        
+    conn = get_db_connection()
+    conn.execute(
+        "INSERT INTO attendance (user_id, subject_name, attended, total) VALUES (?, ?, ?, ?)",
+        (user_id, subject_name, attended, total)
+    )
+    conn.commit()
+    conn.close()
+    
+    flash("Subject added to tracker!", "success")
+    return redirect(url_for('attendance'))
+
+@app.route('/attendance/log/<int:attendance_id>/<string:type>', methods=['POST'])
+@login_required
+def log_lecture(attendance_id, type):
+    user_id = session['user_id']
+    conn = get_db_connection()
+    record = conn.execute("SELECT * FROM attendance WHERE id = ? AND user_id = ?", (attendance_id, user_id)).fetchone()
+    
+    if not record:
+        conn.close()
+        flash("Record not found.", "error")
+        return redirect(url_for('attendance'))
+        
+    attended = record['attended']
+    total = record['total']
+    
+    if type == 'attend':
+        attended += 1
+        total += 1
+    elif type == 'absent':
+        total += 1
+        
+    conn.execute(
+        "UPDATE attendance SET attended = ?, total = ? WHERE id = ? AND user_id = ?",
+        (attended, total, attendance_id, user_id)
+    )
+    conn.commit()
+    conn.close()
+    flash(f"Logged lecture as {'Present' if type == 'attend' else 'Absent'}.", "success")
+    return redirect(url_for('attendance'))
+
+@app.route('/attendance/delete/<int:attendance_id>', methods=['POST'])
+@login_required
+def delete_attendance(attendance_id):
+    user_id = session['user_id']
+    conn = get_db_connection()
+    conn.execute("DELETE FROM attendance WHERE id = ? AND user_id = ?", (attendance_id, user_id))
+    conn.commit()
+    conn.close()
+    flash("Subject tracker deleted.", "success")
+    return redirect(url_for('attendance'))
+
+@app.route('/chat')
+@login_required
+def chat():
+    return render_template('chat.html', active_page='chat')
+
+@app.route('/api/chat', methods=['POST'])
+@login_required
+def api_chat():
+    user_id = session['user_id']
+    data = request.get_json()
+    query = data.get('message', '').strip()
+    
+    if not query:
+        return jsonify({"status": "error", "message": "Query cannot be empty"})
+        
+    # Gather context from SQLite
+    conn = get_db_connection()
+    tasks_rows = conn.execute("SELECT * FROM tasks WHERE user_id = ?", (user_id,)).fetchall()
+    attendance_rows = conn.execute("SELECT * FROM attendance WHERE user_id = ?", (user_id,)).fetchall()
+    conn.close()
+    
+    tasks_context = [dict(t) for t in tasks_rows]
+    attendance_context = [dict(a) for a in attendance_rows]
+    
+    # Process through Master Agent
     try:
-        for chunk in generate_study_plan(tasks):
-            print(chunk, end='', flush=True)
-        print()
+        reply_generator = handle_autonomous_query(query, tasks_context, attendance_context)
+        reply = "".join(reply_generator)
+        return jsonify({"status": "success", "reply": reply})
     except Exception as e:
-        print(f"\n[ERROR] Error communicating with Ollama: {e}")
-        print("Please verify that Ollama is running and Llama3 is installed (`ollama run llama3`).")
+        return jsonify({"status": "error", "message": str(e)})
 
-def generate_notes_flow():
-    """
-    Prompts the user for a topic and generates exam notes, streaming the output.
-    """
-    print("\n--- AI Exam Notes Generator (Ollama) ---")
-    topic = input("Enter the topic you want exam notes for: ").strip()
+@app.route('/notes')
+@login_required
+def notes():
+    user_id = session['user_id']
+    conn = get_db_connection()
+    notes_history = conn.execute("SELECT id, topic FROM notes WHERE user_id = ? ORDER BY id DESC", (user_id,)).fetchall()
+    
+    view_id = request.args.get('view_id')
+    active_notes = None
+    if view_id:
+        active_notes = conn.execute("SELECT * FROM notes WHERE id = ? AND user_id = ?", (view_id, user_id)).fetchone()
+    elif notes_history:
+        active_notes = conn.execute("SELECT * FROM notes WHERE id = ? AND user_id = ?", (notes_history[0]['id'], user_id)).fetchone()
+        
+    conn.close()
+    return render_template('notes.html', active_page='notes', notes_history=notes_history, active_notes=active_notes)
+
+@app.route('/notes/generate', methods=['POST'])
+@login_required
+def generate_notes_route():
+    user_id = session['user_id']
+    topic = request.form.get('topic', '').strip()
+    
     if not topic:
-        print("[ERROR] Topic cannot be empty.")
-        return
-
-    print(f"[AI] Generating exam-ready notes for '{topic}'. Please wait...")
-    print("\n[AI Notes]:")
-    print("-" * 50)
-    try:
-        for chunk in generate_notes(topic):
-            print(chunk, end='', flush=True)
-        print()
-    except Exception as e:
-        print(f"\n[ERROR] Error communicating with Ollama: {e}")
-        print("Please verify that Ollama is running and Llama3 is installed (`ollama run llama3`).")
-
-def attendance_analysis_flow():
-    """
-    Reads attendance, prints analysis, flags low subjects, 
-    and calculates consecutive lectures needed to hit 75%.
-    """
-    print("\n--- Attendance Analysis ---")
-    attendance = load_attendance()
-    if not attendance:
-        print("No attendance records found in attendance.json.")
-        return
-
-    print(f"{'Subject':<20} {'Attended':<10} {'Total':<10} {'Percentage':<12} {'Status':<15}")
-    print("-" * 72)
+        flash("Please input a valid topic.", "error")
+        return redirect(url_for('notes'))
+        
+    # Call Notes generation agent
+    notes_generator = generate_exam_notes(topic)
+    notes_content = "".join(notes_generator)
     
-    low_attendance_flag = False
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    cursor.execute(
+        "INSERT INTO notes (user_id, topic, generated_notes) VALUES (?, ?, ?)",
+        (user_id, topic, notes_content)
+    )
+    conn.commit()
+    new_id = cursor.lastrowid
+    conn.close()
+    
+    flash(f"Exam notes for '{topic}' generated successfully!", "success")
+    return redirect(url_for('notes') + f"?view_id={new_id}")
 
-    for record in attendance:
-        subject = record.get("subject", "Unknown")
-        attended = record.get("attended", 0)
-        total = record.get("total", 0)
+@app.route('/notes/export/<int:notes_id>')
+@login_required
+def export_notes_pdf(notes_id):
+    user_id = session['user_id']
+    conn = get_db_connection()
+    note = conn.execute("SELECT * FROM notes WHERE id = ? AND user_id = ?", (notes_id, user_id)).fetchone()
+    conn.close()
+    
+    if not note:
+        flash("Notes record not found.", "error")
+        return redirect(url_for('notes'))
         
-        if total == 0:
-            percentage = 0.0
-        else:
-            percentage = (attended / total) * 100
+    pdf_buffer = generate_notes_pdf(note['topic'], note['generated_notes'])
+    return send_file(
+        pdf_buffer,
+        as_attachment=True,
+        download_name=f"{note['topic'].replace(' ', '_')}_notes.pdf",
+        mimetype='application/pdf'
+    )
 
-        # Determine status
-        if percentage >= 75.0:
-            status = "Sufficient"
-        else:
-            status = "LOW (<75%)"
-            low_attendance_flag = True
+@app.route('/study-planner')
+@login_required
+def study_planner():
+    user_id = session['user_id']
+    conn = get_db_connection()
+    active_plan = conn.execute("SELECT * FROM study_plans WHERE user_id = ? ORDER BY id DESC LIMIT 1", (user_id,)).fetchone()
+    conn.close()
+    return render_template('study_planner.html', active_page='study_planner', active_plan=active_plan)
 
-        print(f"{subject:<20} {attended:<10} {total:<10} {percentage:.2f}%{' ':<5} {status:<15}")
-
-        if percentage < 75.0:
-            # Formula: x = 3T - 4A to hit 75%
-            needed = (3 * total) - (4 * attended)
-            if needed > 0:
-                print(f"   * Recommendation: Attend the next {needed} lectures consecutively to reach 75%.")
-            else:
-                # Fallback if rounding edge cases occur
-                print(f"   * Recommendation: Attend next lectures consecutively to improve.")
-
-    if not low_attendance_flag:
-        print("\nExcellent! Your attendance in all subjects is at or above 75%. Keep it up!")
-
-def main():
-    """
-    Main program loop for the Student AI Assistant Agent CLI.
-    """
-    while True:
-        display_menu()
-        choice = input("Enter choice (1-8): ").strip()
+@app.route('/study-planner/generate', methods=['POST'])
+@login_required
+def generate_study_plan_route():
+    user_id = session['user_id']
+    exam_dates = request.form.get('exam_dates', '').strip()
+    
+    if not exam_dates:
+        flash("Please input exam details.", "error")
+        return redirect(url_for('study_planner'))
         
-        if choice == "1":
-            add_task_flow()
-        elif choice == "2":
-            view_tasks_flow()
-        elif choice == "3":
-            ai_prioritize_flow()
-        elif choice == "4":
-            complete_task_flow()
-        elif choice == "5":
-            generate_study_plan_flow()
-        elif choice == "6":
-            generate_notes_flow()
-        elif choice == "7":
-            attendance_analysis_flow()
-        elif choice == "8":
-            print("\nExiting Student AI Assistant Agent. Good luck with your studies!")
-            break
-        else:
-            print("[ERROR] Invalid choice. Please enter a number between 1 and 8.")
+    conn = get_db_connection()
+    tasks = conn.execute("SELECT * FROM tasks WHERE user_id = ? AND status = 'Pending'", (user_id,)).fetchall()
+    attendance = conn.execute("SELECT * FROM attendance WHERE user_id = ?", (user_id,)).fetchall()
+    
+    tasks_context = [dict(t) for t in tasks]
+    attendance_context = [dict(a) for a in attendance]
+    
+    # Query study planner agent
+    plan_generator = generate_custom_study_plan(tasks_context, attendance_context, exam_dates)
+    plan_text = "".join(plan_generator)
+    
+    conn.execute(
+        "INSERT INTO study_plans (user_id, plan_text) VALUES (?, ?)",
+        (user_id, plan_text)
+    )
+    conn.commit()
+    conn.close()
+    
+    flash("AI Study Schedule generated successfully!", "success")
+    return redirect(url_for('study_planner'))
 
-if __name__ == "__main__":
-    main()
+@app.route('/resume-builder')
+@login_required
+def resume_builder():
+    user_id = session['user_id']
+    conn = get_db_connection()
+    resume_data = conn.execute("SELECT * FROM resumes WHERE user_id = ? ORDER BY id DESC LIMIT 1", (user_id,)).fetchone()
+    conn.close()
+    
+    active_resume = session.get('active_resume_content', None)
+    return render_template('resume_builder.html', active_page='resume_builder', resume_data=resume_data, active_resume=active_resume)
+
+@app.route('/resume-builder/build', methods=['POST'])
+@login_required
+def build_resume_route():
+    user_id = session['user_id']
+    skills = request.form.get('skills', '').strip()
+    education = request.form.get('education', '').strip()
+    projects = request.form.get('projects', '').strip()
+    
+    if not skills or not education or not projects:
+        flash("All fields are required to build a resume.", "error")
+        return redirect(url_for('resume_builder'))
+        
+    # Save parameters
+    conn = get_db_connection()
+    conn.execute("DELETE FROM resumes WHERE user_id = ?", (user_id,))
+    conn.execute(
+        "INSERT INTO resumes (user_id, skills, education, projects) VALUES (?, ?, ?, ?)",
+        (user_id, skills, education, projects)
+    )
+    conn.commit()
+    conn.close()
+    
+    # Call AI agent to polish
+    resume_generator = build_resume_content(skills, education, projects)
+    resume_content = "".join(resume_generator)
+    
+    session['active_resume_content'] = resume_content
+    flash("Resume compiled and optimized by AI!", "success")
+    return redirect(url_for('resume_builder'))
+
+@app.route('/resume-builder/export')
+@login_required
+def export_resume_pdf():
+    user_id = session['user_id']
+    conn = get_db_connection()
+    resume_data = conn.execute("SELECT * FROM resumes WHERE user_id = ? ORDER BY id DESC LIMIT 1", (user_id,)).fetchone()
+    conn.close()
+    
+    ai_resume = session.get('active_resume_content', '')
+    
+    if not resume_data:
+        flash("No resume details found.", "error")
+        return redirect(url_for('resume_builder'))
+        
+    pdf_buffer = generate_resume_pdf(
+        resume_data['skills'],
+        resume_data['education'],
+        resume_data['projects'],
+        ai_resume
+    )
+    return send_file(
+        pdf_buffer,
+        as_attachment=True,
+        download_name="Student_Resume.pdf",
+        mimetype='application/pdf'
+    )
+
+@app.route('/marks-predictor', methods=['GET', 'POST'])
+@login_required
+def marks_predictor():
+    prediction = session.get('last_marks_prediction', None)
+    input_data = session.get('last_marks_inputs', None)
+    return render_template('marks_predictor.html', active_page='marks_predictor', prediction=prediction, input_data=input_data)
+
+@app.route('/marks-predictor/predict', methods=['POST'])
+@login_required
+def marks_predictor_route():
+    try:
+        attendance = float(request.form.get('attendance', 0.0))
+        study_hours = float(request.form.get('study_hours', 0.0))
+        internal_marks = float(request.form.get('internal_marks', 0.0))
+        
+        prediction = predict_score(attendance, study_hours, internal_marks)
+        
+        session['last_marks_prediction'] = prediction
+        session['last_marks_inputs'] = {
+            "attendance": attendance,
+            "study_hours": study_hours,
+            "internal_marks": internal_marks
+        }
+        session['predicted_marks'] = prediction
+        
+        flash("Exam score predicted successfully via Scikit-learn Linear Regression!", "success")
+    except Exception as e:
+        flash(f"Error predicting score: {e}", "error")
+        
+    return redirect(url_for('marks_predictor'))
+
+@app.route('/profile')
+@login_required
+def profile():
+    skills = session.get('profile_skills', '')
+    projects = session.get('profile_projects', '')
+    interests = session.get('profile_interests', '')
+    recommendations = session.get('internship_recs', '')
+    
+    return render_template(
+        'profile.html',
+        active_page='profile',
+        skills=skills,
+        projects=projects,
+        interests=interests,
+        recommendations=recommendations
+    )
+
+@app.route('/profile/update', methods=['POST'])
+@login_required
+def update_profile():
+    session['profile_skills'] = request.form.get('skills', '').strip()
+    session['profile_projects'] = request.form.get('projects', '').strip()
+    session['profile_interests'] = request.form.get('interests', '').strip()
+    flash("Skills and Career profile saved successfully!", "success")
+    return redirect(url_for('profile'))
+
+@app.route('/profile/match-internships', methods=['POST'])
+@login_required
+def match_internships():
+    skills = session.get('profile_skills', '')
+    projects = session.get('profile_projects', '')
+    interests = session.get('profile_interests', '')
+    
+    if not skills or not projects:
+        flash("Please set your skills and projects in your profile first.", "error")
+        return redirect(url_for('profile'))
+        
+    rec_generator = recommend_internships(skills, projects, interests)
+    recommendations = "".join(rec_generator)
+    
+    session['internship_recs'] = recommendations
+    flash("Matched career options with AI Internship Recruiter!", "success")
+    return redirect(url_for('profile'))
+
+if __name__ == '__main__':
+    app.run(host='127.0.0.1', port=5000, debug=True)

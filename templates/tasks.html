@@ -1,0 +1,109 @@
+{% extends "base.html" %}
+
+{% block title %}Task Management - Student AI Agent{% endblock %}
+
+{% block content %}
+<div class="container-fluid px-0">
+    <div class="row mb-5">
+        <div class="col-md-8">
+            <h1 class="font-outfit fw-bold text-gradient-primary">Task Management</h1>
+            <p class="text-secondary">Keep track of your course works, quizzes, and project milestones.</p>
+        </div>
+        <div class="col-md-4 text-md-end">
+            <button class="btn btn-primary-gradient px-4 py-3" data-bs-toggle="collapse" data-bs-target="#addTaskPanel">
+                <i class="fa-solid fa-plus me-2"></i> Add New Task
+            </button>
+        </div>
+    </div>
+
+    <!-- Collapse Panel for Add Task Form -->
+    <div class="collapse mb-5" id="addTaskPanel">
+        <div class="card glass-panel border-0 text-white p-4">
+            <h4 class="font-outfit fw-bold mb-4">Add New Task</h4>
+            <form action="{{ url_for('add_task') }}" method="POST">
+                <div class="row g-3">
+                    <div class="col-md-6">
+                        <label for="task_name" class="form-label text-secondary">Task Name</label>
+                        <input type="text" class="form-control form-control-glass" id="task_name" name="task_name" placeholder="e.g. React Project Milestone" required>
+                    </div>
+                    <div class="col-md-6">
+                        <label for="deadline" class="form-label text-secondary">Deadline</label>
+                        <input type="text" class="form-control form-control-glass" id="deadline" name="deadline" placeholder="e.g. 'Tomorrow', '3 Days', or '2026-06-25'" required>
+                    </div>
+                    <div class="col-12 text-end">
+                        <button type="submit" class="btn btn-primary-gradient px-4">Save Task</button>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Tasks List Panel -->
+    <div class="card glass-panel border-0 text-white p-4">
+        <h4 class="font-outfit fw-bold mb-4">Academic Tasks</h4>
+        {% if tasks %}
+            <div class="table-responsive">
+                <table class="table table-glass bg-transparent text-white align-middle mb-0">
+                    <thead>
+                        <tr>
+                            <th>Task Name</th>
+                            <th>Deadline</th>
+                            <th>Days Remaining</th>
+                            <th>Priority</th>
+                            <th>Status</th>
+                            <th class="text-center">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for task in tasks %}
+                            <tr>
+                                <td class="fw-bold">{{ task.task_name }}</td>
+                                <td>{{ task.deadline }}</td>
+                                <td>
+                                    {% if task.status == 'Pending' %}
+                                        <span class="{% if task.days_remaining <= 2 %}text-danger fw-bold{% else %}text-secondary{% endif %}">
+                                            {{ task.days_remaining }} days left
+                                        </span>
+                                    {% else %}
+                                        <span class="text-muted">--</span>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    <span class="badge badge-priority-{{ task.priority }} px-3 py-2">
+                                        {{ task.priority }}
+                                    </span>
+                                </td>
+                                <td>
+                                    {% if task.status == 'Pending' %}
+                                        <span class="text-warning"><i class="fa-solid fa-clock me-1"></i> Pending</span>
+                                    {% else %}
+                                        <span class="text-success"><i class="fa-solid fa-circle-check me-1"></i> Completed</span>
+                                    {% endif %}
+                                </td>
+                                <td class="text-center">
+                                    <div class="d-flex justify-content-center gap-2">
+                                        {% if task.status == 'Pending' %}
+                                            <form action="{{ url_for('complete_task', task_id=task.id) }}" method="POST" style="display:inline;">
+                                                <button type="submit" class="btn btn-sm btn-outline-success border-0" title="Mark Complete">
+                                                    <i class="fa-solid fa-check fs-5"></i>
+                                                </button>
+                                            </form>
+                                        {% endif %}
+                                        <form action="{{ url_for('delete_task', task_id=task.id) }}" method="POST" style="display:inline;">
+                                            <button type="submit" class="btn btn-sm btn-outline-danger border-0" title="Delete Task" onclick="return confirm('Are you sure you want to delete this task?');">
+                                                <i class="fa-solid fa-trash-can fs-5"></i>
+                                            </button>
+                                        </form>
+                                    </div>
+                                </td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        {% else %}
+            <p class="text-secondary mb-0">No tasks on record. Click "Add New Task" to start.</p>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

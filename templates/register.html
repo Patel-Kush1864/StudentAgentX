@@ -1,0 +1,37 @@
+{% extends "base.html" %}
+
+{% block title %}Register - Student AI Agent{% endblock %}
+
+{% block content %}
+<div class="container d-flex justify-content-center align-items-center" style="min-height: 80vh;">
+    <div class="card glass-panel text-white p-5 border-0" style="width: 100%; max-width: 480px;">
+        <div class="text-center mb-4">
+            <i class="fa-solid fa-user-plus fa-3x text-gradient-primary mb-3"></i>
+            <h2 class="font-outfit fw-bold text-gradient-primary">Register Account</h2>
+            <p class="text-secondary">Join the Autonomous Student System</p>
+        </div>
+        <form action="{{ url_for('register') }}" method="POST">
+            <div class="mb-3">
+                <label for="name" class="form-label text-secondary">Full Name</label>
+                <input type="text" class="form-control form-control-glass" id="name" name="name" placeholder="John Doe" required>
+            </div>
+            <div class="mb-3">
+                <label for="email" class="form-label text-secondary">Email Address</label>
+                <input type="email" class="form-control form-control-glass" id="email" name="email" placeholder="name@domain.com" required>
+            </div>
+            <div class="mb-4">
+                <label for="password" class="form-label text-secondary">Password</label>
+                <input type="password" class="form-control form-control-glass" id="password" name="password" placeholder="••••••••" required>
+            </div>
+            <button type="submit" class="btn btn-primary-gradient w-100 py-3 mb-4">
+                Register Student
+            </button>
+            <div class="text-center">
+                <p class="text-secondary mb-0">
+                    Already registered? <a href="{{ url_for('login') }}" class="text-info text-decoration-none">Sign In</a>
+                </p>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}

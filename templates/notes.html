@@ -1,0 +1,74 @@
+{% extends "base.html" %}
+
+{% block title %}Notes Generator - Student Success AI{% endblock %}
+
+{% block content %}
+<div class="container-fluid px-0">
+    <div class="row mb-5">
+        <div class="col-12">
+            <h1 class="font-outfit fw-bold text-gradient-primary">AI Notes Generator</h1>
+            <p class="text-secondary">Enter any topic and get exam-ready notes structured with Introduction, Concept, Working, Advantages, Disadvantages, and Conclusion.</p>
+        </div>
+    </div>
+
+    <div class="row g-4">
+        <!-- Input Form and History -->
+        <div class="col-lg-4">
+            <div class="card glass-panel border-0 text-white p-4 mb-4">
+                <h4 class="font-outfit fw-bold mb-4">New Study Notes</h4>
+                <form action="{{ url_for('generate_notes_route') }}" method="POST">
+                    <div class="mb-4">
+                        <label for="topic" class="form-label text-secondary">Topic / Concept Name</label>
+                        <input type="text" class="form-control form-control-glass" id="topic" name="topic" placeholder="e.g. Ethereum Staking, Virtual Memory" required>
+                    </div>
+                    <button type="submit" class="btn btn-primary-gradient w-100 py-3">
+                        <i class="fa-solid fa-wand-magic-sparkles me-2"></i> Generate Notes
+                    </button>
+                </form>
+            </div>
+
+            <!-- Notes History -->
+            <div class="card glass-panel border-0 text-white p-4">
+                <h5 class="font-outfit fw-bold mb-3">Saved Notes History</h5>
+                {% if notes_history %}
+                    <div class="list-group list-group-flush bg-transparent">
+                        {% for item in notes_history %}
+                            <a href="{{ url_for('notes') }}?view_id={{ item.id }}" class="list-group-item list-group-item-action bg-transparent text-white px-0 border-bottom-0 py-2 d-flex justify-content-between align-items-center">
+                                <span class="text-truncate" style="max-width: 80%;">{{ item.topic }}</span>
+                                <i class="fa-solid fa-chevron-right text-secondary small"></i>
+                            </a>
+                        {% endfor %}
+                    </div>
+                {% else %}
+                    <p class="text-secondary mb-0 small">No saved notes found.</p>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- Notes Display -->
+        <div class="col-lg-8">
+            <div class="card glass-panel border-0 text-white p-4 h-100">
+                {% if active_notes %}
+                    <div class="d-flex justify-content-between align-items-center mb-4">
+                        <h3 class="font-outfit fw-bold text-gradient-primary mb-0">{{ active_notes.topic }}</h3>
+                        <a href="{{ url_for('export_notes_pdf', notes_id=active_notes.id) }}" class="btn btn-accent-gradient">
+                            <i class="fa-solid fa-file-pdf me-2"></i> Export to PDF
+                        </a>
+                    </div>
+                    <div class="p-3 rounded" style="background: rgba(15, 23, 42, 0.45); border: 1px solid var(--glass-border); max-height: calc(100vh - 250px); overflow-y: auto;">
+                        <div style="white-space: pre-wrap; font-family: 'Inter', sans-serif; font-size: 0.95rem; line-height: 1.6; color: var(--text-primary);">
+                            {{ active_notes.generated_notes }}
+                        </div>
+                    </div>
+                {% else %}
+                    <div class="text-center py-5">
+                        <i class="fa-solid fa-book fa-4x text-muted mb-3"></i>
+                        <h5 class="text-secondary">No notes selected</h5>
+                        <p class="text-muted small">Select an item from history or enter a topic on the left to generate exam notes.</p>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

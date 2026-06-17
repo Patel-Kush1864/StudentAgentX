@@ -1,0 +1,33 @@
+{% extends "base.html" %}
+
+{% block title %}Login - Student AI Agent{% endblock %}
+
+{% block content %}
+<div class="container d-flex justify-content-center align-items-center" style="min-height: 80vh;">
+    <div class="card glass-panel text-white p-5 border-0" style="width: 100%; max-width: 450px;">
+        <div class="text-center mb-4">
+            <i class="fa-solid fa-graduation-cap fa-3x text-gradient-primary mb-3"></i>
+            <h2 class="font-outfit fw-bold text-gradient-primary">Welcome Back</h2>
+            <p class="text-secondary">Access your Autonomous Student Agent</p>
+        </div>
+        <form action="{{ url_for('login') }}" method="POST">
+            <div class="mb-4">
+                <label for="email" class="form-label text-secondary">Email Address</label>
+                <input type="email" class="form-control form-control-glass" id="email" name="email" placeholder="name@domain.com" required>
+            </div>
+            <div class="mb-4">
+                <label for="password" class="form-label text-secondary">Password</label>
+                <input type="password" class="form-control form-control-glass" id="password" name="password" placeholder="••••••••" required>
+            </div>
+            <button type="submit" class="btn btn-primary-gradient w-100 py-3 mb-4">
+                Sign In
+            </button>
+            <div class="text-center">
+                <p class="text-secondary mb-0">
+                    New student? <a href="{{ url_for('register') }}" class="text-info text-decoration-none">Create an Account</a>
+                </p>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}

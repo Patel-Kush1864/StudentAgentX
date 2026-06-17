@@ -1,0 +1,65 @@
+{% extends "base.html" %}
+
+{% block title %}Resume Builder - Student Success AI{% endblock %}
+
+{% block content %}
+<div class="container-fluid px-0">
+    <div class="row mb-5">
+        <div class="col-12">
+            <h1 class="font-outfit fw-bold text-gradient-primary">AI Resume Builder</h1>
+            <p class="text-secondary">Provide your basic skills, education history, and projects. Our AI Agent will structure and enhance them into an industry-ready resume, ready for PDF export.</p>
+        </div>
+    </div>
+
+    <div class="row g-4">
+        <!-- Resume Inputs Form -->
+        <div class="col-lg-5">
+            <div class="card glass-panel border-0 text-white p-4">
+                <h4 class="font-outfit fw-bold mb-4">Resume Information</h4>
+                <form action="{{ url_for('build_resume_route') }}" method="POST">
+                    <div class="mb-3">
+                        <label for="education" class="form-label text-secondary">Education</label>
+                        <textarea class="form-control form-control-glass" id="education" name="education" rows="3" placeholder="e.g.&#10;BS Computer Science, XYZ University, GPA 3.8/4.0" required>{% if resume_data %}{{ resume_data.education }}{% endif %}</textarea>
+                    </div>
+                    <div class="mb-3">
+                        <label for="skills" class="form-label text-secondary">Core Skills</label>
+                        <textarea class="form-control form-control-glass" id="skills" name="skills" rows="3" placeholder="e.g.&#10;Python, JavaScript, Flask, SQLite, React, Docker" required>{% if resume_data %}{{ resume_data.skills }}{% endif %}</textarea>
+                    </div>
+                    <div class="mb-4">
+                        <label for="projects" class="form-label text-secondary">Projects</label>
+                        <textarea class="form-control form-control-glass" id="projects" name="projects" rows="4" placeholder="e.g.&#10;1. Student Success Agent: Built a Flask web app with SQLite database and Ollama Llama3 AI integration." required>{% if resume_data %}{{ resume_data.projects }}{% endif %}</textarea>
+                    </div>
+                    <button type="submit" class="btn btn-primary-gradient w-100 py-3">
+                        <i class="fa-solid fa-file-signature me-2"></i> Compile & Polish Resume
+                    </button>
+                </form>
+            </div>
+        </div>
+
+        <!-- Generated Resume Display -->
+        <div class="col-lg-7">
+            <div class="card glass-panel border-0 text-white p-4 h-100">
+                {% if active_resume %}
+                    <div class="d-flex justify-content-between align-items-center mb-4">
+                        <h4 class="font-outfit fw-bold text-gradient-primary mb-0">Compiled Resume Preview</h4>
+                        <a href="{{ url_for('export_resume_pdf') }}" class="btn btn-accent-gradient">
+                            <i class="fa-solid fa-file-pdf me-2"></i> Export PDF Resume
+                        </a>
+                    </div>
+                    <div class="p-3 rounded" style="background: rgba(15, 23, 42, 0.45); border: 1px solid var(--glass-border); max-height: calc(100vh - 250px); overflow-y: auto;">
+                        <div style="white-space: pre-wrap; font-family: 'Inter', sans-serif; font-size: 0.9rem; line-height: 1.5; color: var(--text-primary);">
+                            {{ active_resume }}
+                        </div>
+                    </div>
+                {% else %}
+                    <div class="text-center py-5">
+                        <i class="fa-solid fa-file-invoice fa-4x text-muted mb-3"></i>
+                        <h5 class="text-secondary">No resume compiled</h5>
+                        <p class="text-muted small">Input your skills, education, and academic projects on the left to compile an optimized professional resume.</p>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

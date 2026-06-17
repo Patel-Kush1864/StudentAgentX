@@ -1,0 +1,125 @@
+{% extends "base.html" %}
+
+{% block title %}Attendance - Student AI Agent{% endblock %}
+
+{% block content %}
+<div class="container-fluid px-0">
+    <div class="row mb-5">
+        <div class="col-md-8">
+            <h1 class="font-outfit fw-bold text-gradient-primary">Attendance Tracker</h1>
+            <p class="text-secondary">Keep track of your subject attendance percentages and avoid shortage penalties.</p>
+        </div>
+        <div class="col-md-4 text-md-end">
+            <button class="btn btn-primary-gradient px-4 py-3" data-bs-toggle="collapse" data-bs-target="#addSubjectPanel">
+                <i class="fa-solid fa-plus me-2"></i> Track New Subject
+            </button>
+        </div>
+    </div>
+
+    <!-- Collapse Panel for Add Subject Form -->
+    <div class="collapse mb-5" id="addSubjectPanel">
+        <div class="card glass-panel border-0 text-white p-4">
+            <h4 class="font-outfit fw-bold mb-4">Track New Subject</h4>
+            <form action="{{ url_for('add_attendance') }}" method="POST">
+                <div class="row g-3">
+                    <div class="col-md-4">
+                        <label for="subject_name" class="form-label text-secondary">Subject Name</label>
+                        <input type="text" class="form-control form-control-glass" id="subject_name" name="subject_name" placeholder="e.g. Mathematics" required>
+                    </div>
+                    <div class="col-md-4">
+                        <label for="attended" class="form-label text-secondary">Attended Lectures</label>
+                        <input type="number" class="form-control form-control-glass" id="attended" name="attended" min="0" value="0" required>
+                    </div>
+                    <div class="col-md-4">
+                        <label for="total" class="form-label text-secondary">Total Lectures</label>
+                        <input type="number" class="form-control form-control-glass" id="total" name="total" min="0" value="0" required>
+                    </div>
+                    <div class="col-12 text-end">
+                        <button type="submit" class="btn btn-primary-gradient px-4">Track Subject</button>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Attendance Analysis Table -->
+    <div class="card glass-panel border-0 text-white p-4">
+        <h4 class="font-outfit fw-bold mb-4">Subject Attendance Statistics</h4>
+        {% if attendance %}
+            <div class="table-responsive">
+                <table class="table table-glass bg-transparent text-white align-middle mb-0">
+                    <thead>
+                        <tr>
+                            <th>Subject</th>
+                            <th class="text-center">Attended / Total</th>
+                            <th class="text-center">Percentage</th>
+                            <th class="text-center">Status</th>
+                            <th>Shortage Risk (If you miss next 3 lectures)</th>
+                            <th class="text-center">Quick Log</th>
+                            <th class="text-center">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for r in attendance %}
+                            <tr>
+                                <td class="fw-bold">{{ r.subject }}</td>
+                                <td class="text-center">{{ r.attended }} / {{ r.total }}</td>
+                                <td class="text-center fw-bold {% if r.percentage >= 75 %}text-success{% else %}text-danger{% endif %}">
+                                    {{ r.percentage }}%
+                                </td>
+                                <td class="text-center">
+                                    {% if r.percentage >= 75 %}
+                                        <span class="badge bg-success-subtle text-success border border-success-subtle px-3 py-2">Sufficient</span>
+                                    {% else %}
+                                        <span class="badge bg-danger-subtle text-danger border border-danger-subtle px-3 py-2">LOW (<75%)</span>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    {% if r.shortage_risk %}
+                                        <span class="text-danger fw-bold"><i class="fa-solid fa-triangle-exclamation"></i> High Risk ({{ r.projected_percentage }}%)</span>
+                                    {% else %}
+                                        <span class="text-secondary">Low Risk ({{ r.projected_percentage }}%)</span>
+                                    {% endif %}
+                                </td>
+                                <td class="text-center">
+                                    <div class="d-flex justify-content-center gap-2">
+                                        <form action="{{ url_for('log_lecture', attendance_id=r.id, type='attend') }}" method="POST" style="display:inline;">
+                                            <button type="submit" class="btn btn-sm btn-success py-1 px-2 border-0" title="Attended class (+1 / +1)">
+                                                Present
+                                            </button>
+                                        </form>
+                                        <form action="{{ url_for('log_lecture', attendance_id=r.id, type='absent') }}" method="POST" style="display:inline;">
+                                            <button type="submit" class="btn btn-sm btn-danger py-1 px-2 border-0" title="Missed class (0 / +1)">
+                                                Absent
+                                            </button>
+                                        </form>
+                                    </div>
+                                </td>
+                                <td class="text-center">
+                                    <form action="{{ url_for('delete_attendance', attendance_id=r.id) }}" method="POST" style="display:inline;">
+                                        <button type="submit" class="btn btn-sm btn-outline-danger border-0" title="Delete Subject" onclick="return confirm('Are you sure you want to delete this subject?');">
+                                            <i class="fa-solid fa-trash-can fs-5"></i>
+                                        </button>
+                                    </form>
+                                </td>
+                            </tr>
+                            {% if r.percentage < 75 %}
+                                <tr class="bg-transparent">
+                                    <td colspan="7" class="py-2 border-bottom-0" style="background: rgba(239, 68, 68, 0.05) !important;">
+                                        <div class="text-warning small ps-3">
+                                            <i class="fa-solid fa-lightbulb"></i>
+                                            <strong>Recovery Strategy:</strong> You need to attend the next <strong>{{ r.needed }}</strong> lectures consecutively to recover your attendance to 75%.
+                                        </div>
+                                    </td>
+                                </tr>
+                            {% endif %}
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        {% else %}
+            <p class="text-secondary mb-0">No subject records found. Click "Track New Subject" to begin.</p>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,41 @@
+{% extends "base.html" %}
+
+{% block title %}AI Chat Assistant - Student Success AI{% endblock %}
+
+{% block content %}
+<div class="container-fluid px-0 chat-container">
+    <div class="row mb-3">
+        <div class="col-12">
+            <h1 class="font-outfit fw-bold text-gradient-primary">AI Chat Assistant</h1>
+            <p class="text-secondary mb-0">Ask your Autonomous Master Agent career advice, study planning requests, exam questions, or task prioritization queries.</p>
+        </div>
+    </div>
+
+    <!-- Messages Board -->
+    <div class="card glass-panel border-0 text-white p-0 d-flex flex-column" style="height: 65vh;">
+        <div class="chat-messages" id="chat-messages">
+            <!-- Initial Greetings -->
+            <div class="chat-bubble chat-bubble-ai">
+                <strong>Autonomous Master Success Agent</strong><br>
+                Hello! I am your Autonomous Success Agent. I have active access to your local tasks and class attendance records. Feel free to ask me questions like:
+                <ul class="mb-0 mt-2 text-secondary small" style="line-height: 1.5;">
+                    <li>"I have Blockchain exam next week."</li>
+                    <li>"What should I study today?"</li>
+                    <li>"Generate notes for Ethereum Staking."</li>
+                    <li>"Suggest internship opportunities."</li>
+                </ul>
+            </div>
+        </div>
+
+        <!-- Chat Input Form -->
+        <div class="chat-input-area">
+            <form id="chat-form" class="d-flex gap-3">
+                <input type="text" class="form-control form-control-glass flex-grow-1" id="chat-input" placeholder="Type your academic or career query..." autocomplete="off" required>
+                <button type="submit" class="btn btn-primary-gradient px-4">
+                    <i class="fa-solid fa-paper-plane"></i>
+                </button>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}
