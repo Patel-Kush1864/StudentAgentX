@@ -1,0 +1,32 @@
+[
+    {
+        "task": "Blockchain Assignment",
+        "deadline": "Tomorrow",
+        "status": "Pending"
+    },
+    {
+        "task": "Cyber Security Notes",
+        "deadline": "3 Days",
+        "status": "Pending"
+    },
+    {
+        "task": "React Project",
+        "deadline": "7 Days",
+        "status": "Pending"
+    },
+    {
+        "task": "Math Quiz Preparation",
+        "deadline": "2 Days",
+        "status": "Pending"
+    },
+    {
+        "task": "English Essay",
+        "deadline": "Completed",
+        "status": "Completed"
+    },
+    {
+        "task": "Blockchain Assignment",
+        "deadline": "Tomorrow",
+        "status": "Pending"
+    }
+]
