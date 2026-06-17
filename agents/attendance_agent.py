@@ -28,6 +28,7 @@ def analyze_attendance(records):
         shortage_risk = projected_pct < 75.0
         
         analysis_results.append({
+            "id": r.get("id"),
             "subject": subj,
             "attended": att,
             "total": tot,
